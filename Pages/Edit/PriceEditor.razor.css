@@ -1,0 +1,16 @@
+﻿::deep input {
+    text-align: right;
+}
+
+div {
+    position: relative;
+}
+
+    div:after {
+        content: '$';
+        position: absolute;
+        top: 0;
+        left: 0.5rem;
+        line-height: 2.4rem;
+        color: gray;
+    }

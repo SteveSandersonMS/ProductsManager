@@ -1,0 +1,79 @@
+﻿@using System.Linq.Expressions
+@inject ApplicationDbContext Db
+
+<div class="input-group w-50">
+    <select @bind="@selectedCategory" @bind:after="NotifyCategoryChanged" class="form-select @EditContext?.FieldCssClass(categoryFieldIdentifier)" aria-label="Category">
+        <option value="">(all)</option>
+        @foreach (var category in categories ?? Array.Empty<string>())
+        {
+            <option>@category</option>
+        }
+    </select>
+
+    <span class="input-group-text">&gt;</span>
+
+    <select @bind="@selectedSubcategory" @bind:after="NotifySubcategoryChanged" class="form-select @EditContext?.FieldCssClass(subcategoryFieldIdentifier)" aria-label="Subcategory">
+        <option value="">(all)</option>
+        @foreach (var subcategory in subcategories ?? Array.Empty<string>())
+        {
+            <option>@subcategory</option>
+        }
+    </select>
+</div>
+
+@code {
+    string? selectedCategory, selectedSubcategory;
+    string? displayingSubcategoriesOf;
+    string[]? categories, subcategories;
+
+    [Parameter] public string? Category { get; set; } = default!;
+    [Parameter] public EventCallback<string?> CategoryChanged { get; set; }
+    [Parameter] public Expression<Func<string?>>? CategoryExpression { get; set; }
+
+    [Parameter] public string? Subcategory { get; set; } = default!;
+    [Parameter] public EventCallback<string?> SubcategoryChanged { get; set; }
+    [Parameter] public Expression<Func<string?>>? SubcategoryExpression { get; set; }
+
+    [CascadingParameter] public EditContext? EditContext { get; set; }
+    private FieldIdentifier categoryFieldIdentifier, subcategoryFieldIdentifier;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await Db.Products.Select(x => x.Category).Distinct().OrderBy(x => x).ToArrayAsync();
+        categoryFieldIdentifier = FieldIdentifier.Create(CategoryExpression!);
+        subcategoryFieldIdentifier = FieldIdentifier.Create(SubcategoryExpression!);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        selectedCategory = Category;
+        selectedSubcategory = Subcategory;
+        await UpdateSubcategories();
+    }
+
+    async Task NotifyCategoryChanged()
+    {
+        await SubcategoryChanged.InvokeAsync(null);
+        await CategoryChanged.InvokeAsync(selectedCategory);
+        EditContext?.NotifyFieldChanged(categoryFieldIdentifier);
+    }
+
+    async Task NotifySubcategoryChanged()
+    {
+        await SubcategoryChanged.InvokeAsync(selectedSubcategory);
+        EditContext?.NotifyFieldChanged(subcategoryFieldIdentifier);
+    }
+
+    async Task UpdateSubcategories()
+    {
+        if (displayingSubcategoriesOf != selectedCategory)
+        {
+            displayingSubcategoriesOf = selectedCategory;
+            subcategories = null;
+            if (!string.IsNullOrEmpty(displayingSubcategoriesOf))
+            {
+                subcategories = await Db.Products.Where(x => x.Category == displayingSubcategoriesOf).Select(x => x.Subcategory).Distinct().OrderBy(x => x).ToArrayAsync();
+            }
+        }
+    }
+}

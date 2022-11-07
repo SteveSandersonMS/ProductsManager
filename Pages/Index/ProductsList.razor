@@ -1,0 +1,56 @@
+﻿@inherits OwningComponentBase<ApplicationDbContext>
+
+<QuickGrid Class="products" Items="@products" Pagination="@pagination">
+    <PropertyColumn Property="@(p => p.Category)" Sortable="true" />
+    <PropertyColumn Property="@(p => p.Subcategory)" Sortable="true" />
+    <PropertyColumn Property="@(p => p.Name)" Sortable="true">
+        <ColumnOptions>
+            <input @bind="@searchName" placeholder="Search..." class="form-control" autofocus
+                   @bind:event="oninput" @bind:after="UpdateFilter" />
+        </ColumnOptions>
+    </PropertyColumn>
+    <TemplateColumn Title="Price" Align="@Align.Right" SortBy="@(GridSort<Product>.ByAscending(p => p.PriceCents))">
+        $@((context.PriceCents / 100.0).ToString("N2"))
+    </TemplateColumn>
+    <PropertyColumn Property="@(p => p.Stock)" Format="N0" Align="Align.Right" Sortable="true" />
+    <TemplateColumn>
+        <a href="edit/@context.ProductId">Edit</a>
+    </TemplateColumn>
+</QuickGrid>
+<Paginator Value="@pagination" />
+
+
+
+@code {
+    private IQueryable<Product>? products;
+    private PaginationState pagination = new PaginationState { ItemsPerPage = 10 };
+    private string? searchName;
+
+    [Parameter] public string? Category { get; set; }
+    [Parameter] public string? Subcategory { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        UpdateFilter();
+    }
+
+    void UpdateFilter()
+    {
+        products = Service.Products.OrderBy(x => x.ProductId).AsNoTracking();
+
+        if (!string.IsNullOrEmpty(Category))
+        {
+            products = products.Where(x => x.Category == Category);
+        }
+
+        if (!string.IsNullOrEmpty(Subcategory))
+        {
+            products = products.Where(x => x.Subcategory == Subcategory);
+        }
+
+        if (!string.IsNullOrEmpty(searchName))
+        {
+            products = products.Where(x => EF.Functions.Like(x.Name, searchName.Replace("%", "\\%") + "%", "\\"));
+        }
+    }
+}

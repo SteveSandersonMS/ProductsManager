@@ -1,0 +1,87 @@
+﻿@page "/edit/{productId:int}"
+@inherits OwningComponentBase<ApplicationDbContext>
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>Edit @product?.Name</PageTitle>
+
+@if (product is not null)
+{
+    <h1>Edit product</h1>
+
+    <EditForm EditContext="@editContext" OnValidSubmit="SaveChangesAsync">
+        <DataAnnotationsValidator />
+        <p>
+            <label for="name">Name:</label>
+            <InputText @bind-Value="@product.Name" id="name" class="form-control" />
+            <ValidationMessage For="@(() => product.Name)" />
+        </p>
+        <p>
+            <label>Category:</label>
+            <CategoryPicker @bind-Category="@product.Category" @bind-Subcategory="@product.Subcategory" />
+            <ValidationMessage For="@(() => product.Category)" />
+            <ValidationMessage For="@(() => product.Subcategory)" />
+        </p>
+        <p>
+            <label for="location">Location:</label>
+            <InputText @bind-Value="@product.Location" id="location" class="form-control" />
+            <ValidationMessage For="@(() => product.Location)" />
+        </p>
+        <p>
+            <label for="stock">Stock count:</label>
+            <InputNumber @bind-Value="@product.Stock" id="stock" class="form-control form-control-small" />
+            <ValidationMessage For="@(() => product.Stock)" />
+        </p>
+        <p>
+            <label for="price">Price:</label>
+            <PriceEditor @bind-Value="@product.PriceCents" id="price" />
+            <ValidationMessage For="@(() => product.PriceCents)" />
+        </p>
+        <button class="btn btn-primary" type="submit">Save</button>
+    </EditForm>
+
+    @if (savedChanges && !editContext.IsModified())
+    {
+        <p><div class="alert alert-success">✓ Changes saved</div></p>
+    }
+
+    <NavigationLock ConfirmExternalNavigation="@(editContext!.IsModified())"
+                    OnBeforeInternalNavigation="ConfirmInternalNavigation" />
+}
+
+@code {
+    private EditContext editContext = default!;
+    private Product? product;
+    private bool savedChanges;
+
+    [Parameter] public int ProductId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        product = await Service.Products.FindAsync(ProductId);
+        editContext = new EditContext(product!);
+        editContext.SetFieldCssClassProvider(new BootstrapClassProvider());
+    }
+
+    async Task SaveChangesAsync()
+    {
+        if (editContext.IsModified())
+        {
+            await Service.SaveChangesAsync();
+            editContext.MarkAsUnmodified();
+            savedChanges = true;
+        }
+    }
+
+    async Task ConfirmInternalNavigation(LocationChangingContext locationChanging)
+    {
+        if (editContext.IsModified())
+        {
+            var isConfirmed = await JS.InvokeAsync<bool>("confirm", "Discard your changes?");
+            if (!isConfirmed)
+            {
+                locationChanging.PreventNavigation();
+            }
+        }
+    }
+}

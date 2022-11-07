@@ -1,0 +1,11 @@
+﻿label {
+    margin: 0.2rem 0;
+}
+
+::deep .form-control-small {
+    max-width: 10rem;
+}
+
+button[type=submit] {
+    margin-top: 1rem;
+}
