@@ -1,0 +1,7 @@
+bin/
+obj/
+*.suo
+*.csproj.user
+node_modules/
+.vs
+app.db*
